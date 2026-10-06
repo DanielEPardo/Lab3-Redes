@@ -17,7 +17,6 @@
  *
  * YA HECHO    socket y bind (p.190, p.192), bucle de recvfrom (p.208) con origen,
  *             cierre limpio con Ctrl+C, imprimir_suscriptores.
- * POR HACER   TODO 1 .. TODO 4.
  *
  * Compilar:  make udp          Ejecutar:  ./broker_udp 5001
  */
@@ -48,11 +47,11 @@ int            sock_broker = -1;     /* el unico socket del broker */
 static volatile sig_atomic_t seguir = 1;
 static void al_recibir_senal(int s) { (void)s; seguir = 0; }
 
-void imprimir_suscriptores(void);                                                   /* hecho  */
-void procesar_datagrama(char *dgm, size_t lg, const struct sockaddr_in *origen);    /* TODO 1 */
-int  misma_direccion(const struct sockaddr_in *a, const struct sockaddr_in *b);     /* TODO 2 */
-void agregar_suscriptor(const struct sockaddr_in *dir, const char *partido);        /* TODO 3 */
-void reenviar_a_suscriptores(const char *partido, const char *dgm, size_t lg);      /* TODO 4 */
+void imprimir_suscriptores(void);
+void procesar_datagrama(char *dgm, size_t lg, const struct sockaddr_in *origen);
+int  misma_direccion(const struct sockaddr_in *a, const struct sockaddr_in *b);
+void agregar_suscriptor(const struct sockaddr_in *dir, const char *partido);
+void reenviar_a_suscriptores(const char *partido, const char *dgm, size_t lg);
 
 static int leer_puerto(const char *txt)
 {
