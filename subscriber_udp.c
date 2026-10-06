@@ -118,54 +118,75 @@ void suscribirse(int s, const struct sockaddr_in *broker)
         }
         printf("[sub] SUB %s enviado 3 veces\n", estados[i].partido);    
     }
-
-    /* TODO 1 - suscribirse por UDP:
-     *  1. Por cada estados[i]: armar "SUB <partido>\n" con snprintf.
-     *  2. sendto(s, linea, lg, 0, (const struct sockaddr *)broker, sizeof *broker);   (p.207)
-     *  3. Enviarlo 2 o 3 veces (p. ej. con 50 ms entre envios): el SUB tambien puede
-     *     perderse y no hay ACK. El broker debe ignorar los duplicados (su TODO 3).
-     *  Importante: usar ESTE mismo socket para recibir; el broker respondera a la
-     *  IP:puerto de origen de este SUB.
-     */
-    (void)s;
-    (void)broker;
 }
 
 /* Procesa un datagrama "PUB <partido> <seq> <texto>\n" (terminado en '\0'). */
 void procesar_datagrama(char *dgm)
 {
-    /* TODO 2 - parsear:
-     *  1. char partido[PARTIDO_MAX]; unsigned seq; int pos = 0;
-     *     if (sscanf(dgm, "PUB %31s %u %n", partido, &seq, &pos) < 2) -> invalido, return.
-     *  2. EstadoPartido *e = buscar_estado(partido); si es NULL, return.
-     *  3. Imprimir con hora de llegada: "[sub] 10:31:02.123 partido=AvsB seq=3 Gol de ..."
-     *     (la hora sirve para comparar suscriptores en la pregunta de sincronizacion).
-     *  4. registrar_seq(e, seq);
-     */
-    (void)dgm;
+    char partido[PARTIDO_MAX];
+    unsigned seq;
+    int pos = 0;
+
+    if (sscanf(dgm, "PUB %31s %u %n", partido, &seq, &pos) < 2) {
+        return; // no es datagrama valido
+    }
+
+    EstadoPartido *e = buscar_estado(partido);
+    if (e == NULL) {
+        return; // si no se esta suscrito a ese partido
+    }
+
+    char *texto = dgm + pos;
+    size_t len = strlen(texto);
+    if (len > 0 && texto[len - 1] == '\n') {
+        texto[len - 1] = '\0';
+    }
+
+    // imprimir hora de llegada
+    char h[32];
+    hora_actual(h, sizeof h);
+    printf("[sub] %s partido=%s seq=%u %s\n", h, partido, seq, texto);
+
+    registrar_seq(e, seq);
 }
 
 /* Actualiza los contadores de un partido con el seq recibido. */
 void registrar_seq(EstadoPartido *e, unsigned seq)
 {
-    /* TODO 3 - huecos, desorden y duplicados:
-     *  if (seq == 0 || seq > SEQ_MAX) return;
-     *  if (e->visto[seq])      { e->duplicados++; return; }        ya habia llegado
-     *  e->visto[seq] = 1;  e->recibidos++;
-     *  if (seq == e->esperado) { e->esperado++; }                    en orden
-     *  else if (seq > e->esperado) {                                 salto: se abre un hueco
-     *      e->perdidos += seq - e->esperado;  e->esperado = seq + 1;
-     *      imprimir "[sub] HUECO en <partido>: faltan <esperado>..<seq-1>"
-     *  } else {                                                      llego tarde: rellena un hueco
-     *      e->desordenados++;  e->perdidos--;
-     *      imprimir "[sub] DESORDEN en <partido>: llego seq=<seq> despues de <ultimo_seq>"
-     *  }
-     *  if (seq > e->ultimo_seq) e->ultimo_seq = seq;
-     *  Pista de aplicacion (pregunta del marcador): un "Marcador" con seq menor que el
-     *  ultimo marcador mostrado se puede DESCARTAR en vez de pintarlo.
-     */
-    (void)e;
-    (void)seq;
+    if (e == NULL || seq == 0 || seq > SEQ_MAX) {
+        return; // secuencia invalida
+    }
+
+    if (e->visto[seq]) {
+        e->duplicados++;
+        return; // seq duplicado al ya haberse recibido antes
+    }
+
+    // se marca como visto y se incrementa el contador de recibidos
+    e->visto[seq] = 1;
+    e->recibidos++;
+
+    if (seq == e->esperado) {
+        // llego el seq que se esperaba que llegara
+        e->esperado++;
+    } else if (seq > e->esperado) {
+        // hubo un salto al ser la seq mayor, posibles perdidas
+        e->perdidos += (seq - e->esperado);
+        printf("[sub] HUECO en %s: faltan %u..%u\n", e->partido, e->esperado, seq - 1);
+        e->esperado = seq + 1;
+    } else {
+        // llego un paquete viejo
+        e->desordenados++;
+        if (e->perdidos > 0) {
+            e->perdidos--;
+        }
+        printf("[sub] DESORDEN en %s: llego seq=%u despues de %u\n", e->partido, seq, e->ultimo_seq);
+    }
+
+    // se actualiza el ultimo seq visto
+    if (seq > e->ultimo_seq) {
+        e->ultimo_seq = seq;
+    }
 }
 
 int main(int argc, char *argv[])
