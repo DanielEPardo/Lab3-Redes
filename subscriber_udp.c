@@ -10,8 +10,7 @@
  *   duplicados. Termina tras <espera_s> segundos sin recibir nada.
  *
  * YA HECHO    socket (p.190), timeout de inactividad (SO_RCVTIMEO), bucle de
- *             recvfrom (p.208), tabla de estados, RESUMEN.
- * POR HACER   TODO 1 (suscribirse), TODO 2 (parsear), TODO 3 (huecos, desorden, duplicados).
+ *             recvfrom (p.208), tabla de estados, RESUMEN, suscribirse, parsear, huecos, desorden, duplicados.
  *
  * Compilar:  make udp
  * Ejecutar:  ./subscriber_udp 127.0.0.1 5001 3 AvsB CvsD      (3 = segundos de inactividad)
@@ -52,9 +51,9 @@ static void al_recibir_senal(int s) { (void)s; seguir = 0; }
 
 EstadoPartido *buscar_estado(const char *partido);                         /* hecho  */
 void           imprimir_resumen(void);                                     /* hecho  */
-void           suscribirse(int s, const struct sockaddr_in *broker);       /* TODO 1 */
-void           procesar_datagrama(char *dgm);                              /* TODO 2 */
-void           registrar_seq(EstadoPartido *e, unsigned seq);              /* TODO 3 */
+void           suscribirse(int s, const struct sockaddr_in *broker);       /* hecho */
+void           procesar_datagrama(char *dgm);                              /* hecho */
+void           registrar_seq(EstadoPartido *e, unsigned seq);              /* hecho */
 
 static long leer_entero(const char *txt, long min, long max, const char *que)
 {

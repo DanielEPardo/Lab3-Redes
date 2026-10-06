@@ -48,7 +48,7 @@ int            sock_broker = -1;     /* el unico socket del broker */
 static volatile sig_atomic_t seguir = 1;
 static void al_recibir_senal(int s) { (void)s; seguir = 0; }
 
-void imprimir_suscriptores(void);                                                    /* hecho  */
+void imprimir_suscriptores(void);                                                   /* hecho  */
 void procesar_datagrama(char *dgm, size_t lg, const struct sockaddr_in *origen);    /* TODO 1 */
 int  misma_direccion(const struct sockaddr_in *a, const struct sockaddr_in *b);     /* TODO 2 */
 void agregar_suscriptor(const struct sockaddr_in *dir, const char *partido);        /* TODO 3 */
@@ -79,58 +79,68 @@ void imprimir_suscriptores(void)
 /* Decide que hacer con un datagrama recibido (ya terminado en '\0'). */
 void procesar_datagrama(char *dgm, size_t lg, const struct sockaddr_in *origen)
 {
-    /* TODO 1 - distinguir SUB y PUB:
-     *  1. char partido[PARTIDO_MAX];
-     *  2. Si sscanf(dgm, "SUB %31s", partido) == 1 -> agregar_suscriptor(origen, partido).
-     *  3. Si sscanf(dgm, "PUB %31s", partido) == 1 -> reenviar_a_suscriptores(partido, dgm, lg).
-     *  4. Otro caso: imprimir "[broker UDP] datagrama desconocido".
-     *  No hace falta buscar '\n': en UDP un recvfrom = un datagrama = un mensaje (p.208).
-     */
-    (void)dgm;
-    (void)lg;
-    (void)origen;
+    char partido[PARTIDO_MAX];
+
+    if (sscanf(dgm, "SUB %31s", partido) == 1) {
+        agregar_suscriptor(origen, partido); // si el datagrama es de suscripcion
+    }
+    else if (sscanf(dgm, "PUB %31s", partido) == 1) {
+        reenviar_a_suscriptores(partido, dgm, lg); // si el datagrama es de publicacion
+    }
+    else {
+        printf("[broker UDP] Datagrama desconocido\n");
+    }
 }
 
 /* Devuelve 1 si a y b son la misma IP y el mismo puerto. */
 int misma_direccion(const struct sockaddr_in *a, const struct sockaddr_in *b)
 {
-    /* TODO 2 - comparar campo a campo (NO usar memcmp sobre toda la estructura: tiene relleno):
-     *   return a->sin_addr.s_addr == b->sin_addr.s_addr && a->sin_port == b->sin_port;  */
-    (void)a;
-    (void)b;
-    return 0;
+    return (a->sin_addr.s_addr == b->sin_addr.s_addr) && (a->sin_port == b->sin_port);
 }
 
 /* Agrega (dir, partido) si no existe ya. */
 void agregar_suscriptor(const struct sockaddr_in *dir, const char *partido)
 {
-    /* TODO 3 - tabla de suscripciones:
-     *  1. Si ya hay una fila con misma_direccion(...) y el mismo partido, return sin duplicar.
-     *     (el suscriptor puede reenviar su SUB porque en UDP tambien se puede perder)
-     *  2. Si n_suscripciones == MAX_SUSCRIPCIONES, avisar y return.
-     *  3. Copiar *dir y el partido en suscripciones[n_suscripciones]; n_suscripciones++.
-     *  4. imprimir_suscriptores();
-     *  Pregunta para el informe: si el suscriptor se va, ?como se entera el broker? (no hay FIN)
-     */
-    (void)dir;
-    (void)partido;
+    // verificacion duplicados
+    for (int i = 0; i < n_suscripciones; i++) {
+        if (misma_direccion(&suscripciones[i].dir, dir) &&
+            strcmp(suscripciones[i].partido, partido) == 0) {
+            return;
+        }
+    }
+
+    // verificar que haya espacio
+    if (n_suscripciones >= MAX_SUSCRIPCIONES) {
+        fprintf(stderr, "[broker UDP] Error: tabla de suscripciones llena\n");
+        return; // no hay espacion
+    }
+
+    // guardar nueva suscripcion
+    suscripciones[n_suscripciones].dir = *dir;
+    snprintf(suscripciones[n_suscripciones].partido, PARTIDO_MAX, "%s", partido);
+    n_suscripciones++;
+
+    // mostrar lista de suscriptores
+    imprimir_suscriptores();
 }
 
 /* Reenvia el datagrama a cada direccion suscrita al partido. */
 void reenviar_a_suscriptores(const char *partido, const char *dgm, size_t lg)
 {
-    /* TODO 4 - reenvio por tema (fan-out):
-     *  1. Recorrer la tabla; si el partido coincide:
-     *       sendto(sock_broker, dgm, lg, 0, (struct sockaddr *)&suscripciones[i].dir,
-     *              sizeof suscripciones[i].dir);          (p.207)
-     *  2. Si sendto devuelve -1, perror("sendto") y seguir con los demas.
-     *  3. Contar a cuantos se reenvio e imprimir "[broker UDP] PUB AvsB seq=3 -> 2 suscriptores".
-     *  Observe: sendto casi nunca bloquea; si el suscriptor no alcanza a leer, sus
-     *  datagramas se descartan en SU buffer de recepcion y nadie avisa.
-     */
-    (void)partido;
-    (void)dgm;
-    (void)lg;
+    int enviados = 0;
+    for (int i = 0; i < n_suscripciones; i++) {
+        if (strcmp(suscripciones[i].partido, partido) == 0) {
+            ssize_t res = sendto(sock_broker, dgm, lg, 0,
+                    (const struct sockaddr *)&suscripciones[i].dir, sizeof suscripciones[i].dir);
+            if (res == -1) {
+                perror("sendto");
+            } else {
+                enviados++;
+            }
+        }
+    }
+
+    printf("[broker UDP] PUB %s -> reenviado a %d suscriptor(es)\n", partido, enviados);
 }
 
 int main(int argc, char *argv[])
