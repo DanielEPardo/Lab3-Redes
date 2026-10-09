@@ -1,16 +1,13 @@
 
 /*
  * subscriber_udp.c  -  Laboratorio 3 (ISIS-2311L, Uniandes 2026-20)  -  ESQUELETO
- * Grupo: ____    Integrantes: ____________ (codigo) / ____________ / ____________
+ * Grupo: 6 
  *
  * Rol (guia oficial, sec. 4.2)
  *   Hincha que sigue uno o varios partidos por UDP. Envia "SUB <partido>\n" al
  *   broker y muestra cada datagrama PUB que le llega. Como UDP no garantiza
  *   nada (p.207), usa el numero de secuencia para CONTAR perdidas, desorden y
  *   duplicados. Termina tras <espera_s> segundos sin recibir nada.
- *
- * YA HECHO    socket (p.190), timeout de inactividad (SO_RCVTIMEO), bucle de
- *             recvfrom (p.208), tabla de estados, RESUMEN, suscribirse, parsear, huecos, desorden, duplicados.
  *
  * Compilar:  make udp
  * Ejecutar:  ./subscriber_udp 127.0.0.1 5001 3 AvsB CvsD      (3 = segundos de inactividad)

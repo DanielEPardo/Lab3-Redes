@@ -1,6 +1,6 @@
 /*
  * broker_udp.c  -  Laboratorio 3 (ISIS-2311L, Uniandes 2026-20)  -  ESQUELETO
- * Grupo: ____    Integrantes: ____________ (codigo) / ____________ / ____________
+ * Grupo: 6
  *
  * Rol (guia oficial, sec. 4.2)
  *   Recibe datagramas de publicadores y suscriptores por UN solo socket UDP y
@@ -15,8 +15,6 @@
  * cliente. El broker distingue a cada suscriptor por la direccion (IP:puerto)
  * que le devuelve recvfrom, y esa direccion es lo que guarda en la tabla.
  *
- * YA HECHO    socket y bind (p.190, p.192), bucle de recvfrom (p.208) con origen,
- *             cierre limpio con Ctrl+C, imprimir_suscriptores.
  *
  * Compilar:  make udp          Ejecutar:  ./broker_udp 5001
  */
