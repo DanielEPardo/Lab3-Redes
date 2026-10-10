@@ -11,10 +11,27 @@
 #define TAM_BUFFER 512
 #define MAX_TEMA 64
 
+
+/*
+ * publicar_evento() - arma un evento y lo entrega al broker.
+ *   socket_cliente : descriptor ya conectado con connect().
+ *   tema           : nombre del partido, sin espacios y de menos de 64 caracteres.
+ *   mensaje        : texto libre del evento.
+ * No devuelve nada. Si send() falla lo reporta con perror y el programa sigue
+ * con el siguiente evento, porque perder un evento no justifica tumbar al
+ * publicador.
+ */
+
 void publicar_evento(int socket_cliente, const char *tema, const char *mensaje) {
     char buffer_envio[TAM_BUFFER];
     /* El '\n' final delimita el mensaje: sin él TCP podría pegarlo con el siguiente */
     snprintf(buffer_envio, sizeof(buffer_envio), "PUB %s %s\n", tema, mensaje);
+    
+    /* L19  send(): copia los bytes al buffer de transmision del kernel. Que
+ * devuelva >0 significa "TCP lo acepto", no "el broker lo recibio". Puede
+ * aceptar menos bytes de los pedidos (envio parcial); aqui no se reintenta
+ * porque un evento cabe de sobra en el buffer, y queda documentado como
+ * limitacion conocida. */
 
     if (send(socket_cliente, buffer_envio, strlen(buffer_envio), 0) < 0)
         perror("Error al enviar el evento de publicación");
@@ -24,7 +41,8 @@ void publicar_evento(int socket_cliente, const char *tema, const char *mensaje) 
 
 int main(int argc, char *argv[]) {
 
-    /* Crear el socket TCP del publicador */
+    /* L28  socket(): pide al sistema el descriptor del socket TCP. Devuelve -1 si
+ * el sistema no puede crearlo. */
     int socket_cliente = socket(AF_INET, SOCK_STREAM, 0);
     if (socket_cliente < 0) {
         perror("Error al crear el socket del publicador");
@@ -42,7 +60,9 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    /* Conectarse al Broker */
+   /* L46  connect(): dispara el handshake de tres vias (SYN, SYN-ACK, ACK). Si el
+ * broker no esta escuchando en el puerto, falla con ECONNREFUSED. Desde aqui el
+ * socket queda como flujo bidireccional. */
     if (connect(socket_cliente, (struct sockaddr *)&direccion_servidor, sizeof(direccion_servidor)) < 0) {
         perror("Error al conectar con el Broker TCP");
         close(socket_cliente);
@@ -90,6 +110,8 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    /* L93  close(): cierra la conexion y envia FIN. El broker ve que su recv()
+ * devuelve 0 y libera la ranura de este cliente. */
     close(socket_cliente);
     printf("[-] Desconectado del Broker.\n");
     return 0;

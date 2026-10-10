@@ -1,7 +1,6 @@
 /*
  * broker_udp.c  -  Laboratorio 3 (ISIS-2311L, Uniandes 2026-20)  -  ESQUELETO
- * Grupo: ____    Integrantes: ____________ (codigo) / ____________ / ____________
- *
+ * Grupo: 6    Integrantes: Juan David Chavez, Daniel Pardo, Camilo Ochoa
  * Rol (guia oficial, sec. 4.2)
  *   Recibe datagramas de publicadores y suscriptores por UN solo socket UDP y
  *   reenvia cada PUB, sin modificarlo, a las direcciones suscritas al partido.

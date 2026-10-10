@@ -46,6 +46,9 @@ static const char *EVENTOS[] = {
 };
 #define N_EVENTOS (sizeof EVENTOS / sizeof EVENTOS[0])
 
+/* leer_entero() - convierte un argumento de consola a entero y valida que este
+ * entre min y max. Si el texto no es un numero o se sale del rango, imprime el
+ * error y termina el programa: es preferible no arrancar a enviar basura. */
 static long leer_entero(const char *txt, long min, long max, const char *que)
 {
     char *fin;
@@ -57,12 +60,16 @@ static long leer_entero(const char *txt, long min, long max, const char *que)
     return v;
 }
 
+/* dormir_ms() - pausa entre eventos. Reintenta mientras nanosleep sea
+ * interrumpido por una senal (EINTR), para que la pausa dure lo pedido. */
 static void dormir_ms(long ms)
 {
     struct timespec t = { .tv_sec = ms / 1000, .tv_nsec = (ms % 1000) * 1000000L };
     while (nanosleep(&t, &t) == -1 && errno == EINTR) { }
 }
 
+/* hora_actual() - marca de tiempo HH:MM:SS.mmm del envio. Sirve para cruzar la
+ * salida del publicador con las capturas de Wireshark (punto 4 del enunciado). */
 static void hora_actual(char *out, size_t n)
 {
     struct timespec ts;
@@ -89,7 +96,8 @@ int main(int argc, char *argv[])
     }
     setvbuf(stdout, NULL, _IOLBF, 0);
 
-    /* p.207: socket UDP; no hace falta conexion previa. */
+    /* L93   socket(): descriptor UDP. A diferencia de TCP no hay connect ni estado
+ * de conexion; el socket queda listo para enviar de inmediato. */
     int s = socket(AF_INET, SOCK_DGRAM, 0);
     if (s == -1) { perror("socket"); return 1; }
 
@@ -112,12 +120,18 @@ int main(int argc, char *argv[])
         hora_actual(hora, sizeof hora);
 
     
+        /* L115  snprintf(): arma el datagrama con el numero de secuencia. Se verifica
+ * que no haya truncamiento (lg >= sizeof dgm); si no cabe, se salta el evento
+ * en vez de enviar un mensaje cortado que el suscriptor no podria parsear. */
     lg = snprintf(dgm, sizeof dgm, "PUB %s %ld %s\n", partido, i + 1, texto);
             if (lg<=0 || lg >= (int)sizeof dgm){
             fprintf(stderr, "[pub %s] seq=%ld: mensaje demasiado largo\n", partido, i+1);
             continue;
         }
     
+        /* L121  sendto(): un datagrama por evento, con la direccion del broker en cada
+ * llamada. El fallo se reporta y el bucle continua: en UDP un envio perdido no
+ * rompe nada, que es justo lo que el laboratorio quiere medir. */
     if (sendto(s, dgm, (size_t)lg, 0, (struct sockaddr *)&broker, sizeof broker) < 0) {
         perror("sendto");
     } else {
@@ -127,6 +141,9 @@ int main(int argc, char *argv[])
         if (intervalo > 0) dormir_ms(intervalo);
     }
 
+
+    /* L130  close(): en UDP no envia nada al otro lado; el broker no se entera de
+ * que el publicador termino. */
     close(s);     /* p.206: en UDP close no envia nada al otro lado */
     printf("[pub %s] fin: %ld mensajes procesados\n", partido, n_mensajes);
     return 0;
