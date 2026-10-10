@@ -14,8 +14,6 @@
  * cliente. El broker distingue a cada suscriptor por la direccion (IP:puerto)
  * que le devuelve recvfrom, y esa direccion es lo que guarda en la tabla.
  *
- * YA HECHO    socket y bind (p.190, p.192), bucle de recvfrom (p.208) con origen,
- *             cierre limpio con Ctrl+C, imprimir_suscriptores.
  *
  * Compilar:  make udp          Ejecutar:  ./broker_udp 5001
  */

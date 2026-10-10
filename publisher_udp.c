@@ -1,6 +1,6 @@
 /*
  * publisher_udp.c  -  Laboratorio 3 (ISIS-2311L, Uniandes 2026-20)  -  ESQUELETO
- * Grupo: ____    Integrantes: ____________ (codigo) / ____________ / ____________
+ * Grupo: 6 
  *
  * Rol (guia oficial, sec. 4.1 y 4.2)
  *   Periodista de UN partido: envia n_mensajes datagramas al broker, uno cada
@@ -10,9 +10,6 @@
  *   "PUB <partido> <seq> <texto>\n"      seq = 1, 2, 3, ...
  *   El seq es la UNICA forma que tiene el suscriptor de saber que algo se perdio
  *   o llego desordenado: UDP no numera nada por usted.
- *
- * YA HECHO    socket (p.190), direccion del broker, pausa, hora de envio, cierre.
- * POR HACER   TODO 1 y TODO 2.
  *
  * Compilar:  make udp
  * Ejecutar:  ./publisher_udp 127.0.0.1 5001 AvsB 10 200
